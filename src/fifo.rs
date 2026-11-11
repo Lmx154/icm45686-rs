@@ -136,10 +136,9 @@ pub struct AccelGyroFrame {
     pub gyro: [i16; 3],
     /// Temperature, 8-bit FIFO encoding (see [`temperature_c_8bit`]).
     pub temp: i8,
-    /// Timestamp ticks of the device's clock (a tick is 1 us or 16 us of that clock, not of real
-    /// time; see [`timestamp_tick_us`]), or the FSYNC delay when `flags.fsync_tag`; 0 when the
-    /// timestamp is off
-    /// (FIFO_TMST_FSYNC_EN = 0, 16.33, p83).
+    /// Timestamp ticks of the device (a nominal 1 us or 16 us, about 0.44 % fast against real time
+    /// even with the external clock; see [`timestamp_tick_us`]), or the FSYNC delay when
+    /// `flags.fsync_tag`; 0 when the timestamp is off (FIFO_TMST_FSYNC_EN = 0, 16.33, p83).
     pub timestamp: u16,
 }
 
@@ -170,9 +169,9 @@ pub struct HighResFrame {
     pub gyro: [i32; 3],
     /// Temperature, 16-bit FIFO encoding (see [`temperature_c_16bit`]).
     pub temp: i16,
-    /// Timestamp ticks of the device's clock (a tick is 1 us or 16 us of that clock, not of real
-    /// time; see [`timestamp_tick_us`]), or the FSYNC delay when `flags.fsync_tag`; 0 when the
-    /// timestamp is off.
+    /// Timestamp ticks of the device (a nominal 1 us or 16 us, about 0.44 % fast against real time
+    /// even with the external clock; see [`timestamp_tick_us`]), or the FSYNC delay when
+    /// `flags.fsync_tag`; 0 when the timestamp is off.
     pub timestamp: u16,
 }
 
@@ -465,10 +464,15 @@ pub fn hires_gyro_rads(raw: [i32; 3]) -> [f32; 3] {
     raw.map(|v| v as f32 * k)
 }
 
-/// Microseconds per tick, TMST_RESOL (16.34, p84). A tick is a microsecond (or 16 us) of the
-/// DEVICE's clock, not of real time: with the internal oscillator it deviates from real time by the
-/// oscillator's error (0.45 % fast on the test board, measured 2026-11-10: frames 1250 ticks apart
-/// at 800 Hz while the wall-clock period was 1244.4 us); with an external clock it follows that clock.
+/// Nominal microseconds per tick, TMST_RESOL (16.34, p84). The tick is not real time. With the
+/// internal oscillator it was 0.45 % fast on the test board (measured 2026-11-10: frames 1250 ticks
+/// apart at 800 Hz while the wall-clock period was 1244.4 us). With the external 32 kHz clock on
+/// CLKIN it was still about 0.44 % fast (measured on the MARV V2 board, 2026-11-11: frames at 200 Hz
+/// 5022.5 us apart in timestamp units, at 1 us and at 16 us per tick, while the MCU clock measured
+/// 5000.5 us per frame and the output rate on that clock was exact), so the tick does not follow the
+/// external clock. Timestamps are for spacing frames relative to each other; an application that
+/// needs real time calibrates the tick period against its own clock and converts with
+/// [`timestamp_us_with_period`].
 pub const fn timestamp_tick_us(resolution: TimestampResolution) -> u32 {
     match resolution {
         TimestampResolution::Us1 => 1,
@@ -476,11 +480,19 @@ pub const fn timestamp_tick_us(resolution: TimestampResolution) -> u32 {
     }
 }
 
-/// Timestamp ticks to microseconds of the device's clock, in integers (see [`timestamp_tick_us`]:
-/// with the internal oscillator this is not exactly real time). The 16-bit field wraps after 65536
-/// ticks (65.5 ms at 1 us, 1.05 s at 16 us); the largest result is 1 048 560.
+/// Timestamp ticks to nominal microseconds, in integers (see [`timestamp_tick_us`]: this is not
+/// exactly real time, the tick runs about 0.44 % fast). The 16-bit field wraps after 65536 ticks
+/// (65.5 ms at 1 us, 1.05 s at 16 us); the largest result is 1 048 560.
 pub const fn timestamp_us(ticks: u16, resolution: TimestampResolution) -> u32 {
     ticks as u32 * timestamp_tick_us(resolution)
+}
+
+/// Timestamp ticks to microseconds with a tick period the caller supplies, the way to apply a
+/// calibration (for example 0.9956 us per tick measured against the application's own clock instead
+/// of the nominal 1 us). The field is 16 bits wide and wraps: take the difference of two timestamps
+/// with `later.wrapping_sub(earlier)` first, then convert it.
+pub const fn timestamp_us_with_period(ticks: u16, tick_us: f32) -> f32 {
+    ticks as f32 * tick_us
 }
 
 #[cfg(test)]

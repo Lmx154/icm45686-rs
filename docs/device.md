@@ -38,6 +38,19 @@ Pins: see "Pins and bus" below.
 - Measured output rate: internal oscillator 200.895 Hz for a nominal 200 Hz; external clock 200.000 Hz. On the
   external clock the rate is exact up to 3.2 kHz but 6388.7 Hz at the 6.4 kHz setting. The external-clock set-up
   also changes the ICM's filter path, so compare noise only with the filter path held equal.
+- FIFO timestamp tick (measured on the MARV V2 board, 2026-11-11, external clock): frames at 200 Hz were 5022.5 us
+  apart in timestamp units at both 1 us and 16 us per tick, the MCU clock measured 5000.5 us per frame, and the output
+  rate on that clock was exact; the tick runs about 0.44 % fast and does not follow the external clock. Timestamps
+  space frames relative to each other; real time needs a calibration of the tick against the application's clock.
+- Decimation (same board and day, FIFO on at 800 Hz, factors 1, 2, 8): INT1 data-ready 800, 400, 100 per second,
+  data registers changed at the same rates, FIFO frame rate followed. With the FIFO off the driver does not write the
+  decimation, and with factor 8 set then INT1 and both registers stayed at 800 per second.
+- FIFO overflow (2 KB, 16-byte frames, 800 Hz, 350 ms unread): stream mode counts up to capacity + 2 (130); the first
+  two frames of the read are stale, then a timestamp jump, then the newest 127 contiguous. Stop-on-full counts to the
+  capacity (128) and returns the oldest frames. The INT1 FIFO-full flag was set with its INT1 source enabled
+  (2026-11-11) and stayed 0 with only the threshold source enabled (2026-11-10); enable the source to see it.
+- Different accel and gyro rates, FIFO off: INT1 follows the faster sensor, each sensor's registers change at its own
+  rate. With the FIFO on both must be equal after decimation; frames then arrive at the common rate.
 
 ## Pins and bus (from pinout.md)
 

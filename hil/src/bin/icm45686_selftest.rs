@@ -44,11 +44,19 @@ async fn healthy<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, name: &str) -> bool {
     let config = Config::new();
     let mut delay = Delay;
     if let Err(e) = imu.init(&mut delay, &config).await {
-        defmt::error!("[STAT] {=str} health: init failed {}", name, defmt::Debug2Format(&e));
+        defmt::error!(
+            "[STAT] {=str} health: init failed {}",
+            name,
+            defmt::Debug2Format(&e)
+        );
         return false;
     }
     if let Err(e) = imu.verify(&mut delay).await {
-        defmt::error!("[STAT] {=str} health: verify failed {}", name, defmt::Debug2Format(&e));
+        defmt::error!(
+            "[STAT] {=str} health: verify failed {}",
+            name,
+            defmt::Debug2Format(&e)
+        );
         return false;
     }
     let gyro_max = 5.0_f32.to_radians();
@@ -112,12 +120,16 @@ async fn main(_spawner: Spawner) {
         ("gyro only", default.with_accel(false), false),
         (
             "tightest 5%",
-            default.with_accel_tolerance_pct(5).with_gyro_tolerance_pct(5),
+            default
+                .with_accel_tolerance_pct(5)
+                .with_gyro_tolerance_pct(5),
             false,
         ),
         (
             "loosest 50%",
-            default.with_accel_tolerance_pct(50).with_gyro_tolerance_pct(50),
+            default
+                .with_accel_tolerance_pct(50)
+                .with_gyro_tolerance_pct(50),
             false,
         ),
     ];

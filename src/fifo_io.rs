@@ -87,10 +87,13 @@ impl<SPI: SpiDevice> Icm45686<SPI> {
     /// `Some(true)` when the count is at or above the nominal capacity of the FIFO in frames. In
     /// stream mode the count saturates two frames above the nominal capacity (130 with the 2 KB depth
     /// and 16-byte frames, 514 with 8 KB; measured on the board, 2026-11-10), so a buffer for a whole
-    /// FIFO must hold capacity + 2 frames. After an overflow the stream has lost data and the first
-    /// two frames returned are stale (a timestamp jump follows them): call
-    /// [`fifo_flush`](Self::fifo_flush) and discard what was read. Recovery is the application's,
-    /// never automatic. A returned overflow is added once to [`Stats::fifo_overflows`], the frames
+    /// FIFO must hold capacity + 2 frames. After a read that reports an overflow in stream mode the
+    /// first two frames returned are stale (measured on the MARV V2 board, 2026-11-11: 129 frames
+    /// returned, the first two the earliest since the flush, then a timestamp jump, then the newest 127
+    /// contiguous up to the time of the read) and the application must discard them, or call
+    /// [`fifo_flush`](Self::fifo_flush) and discard everything that was read. In stop-on-full mode the
+    /// count stops at the capacity (128 there) and the frames returned are the oldest, with no jump;
+    /// what arrived after the FIFO filled is lost. Recovery is the application's, never automatic. A returned overflow is added once to [`Stats::fifo_overflows`], the frames
     /// to [`Stats::fifo_frames_read`].
     ///
     /// Errors, with no bus access: [`Error::NotConfigured`], [`Error::FifoOff`],
@@ -191,9 +194,12 @@ impl<SPI: SpiDevice> Icm45686<SPI> {
     /// registers are adjacent, 0x19 and 0x1A). Both clear on read (R/C, 16.24, p76; 16.25, p77), so
     /// every flag the application wants is in the returned value and nowhere else. The flags are the
     /// state at the moment of the read: after the FIFO has been drained they read 0, so read the
-    /// status BEFORE draining (measured on the board, 2026-11-10). The `fifo_full` flag exists only
-    /// when [`Int1Config::fifo_full`](crate::Int1Config::fifo_full) is enabled. A `fifo_full`
-    /// flag is added once to [`Stats::fifo_overflows`]. Works whether or not the driver is
+    /// status BEFORE draining (measured on the board, 2026-11-10). The `fifo_full` flag: with only
+    /// the threshold source enabled it stayed 0 through an overflow (measured 2026-11-10); with
+    /// [`Int1Config::fifo_full`](crate::Int1Config::fifo_full) enabled it was set after an overflow
+    /// (measured on the MARV V2 board, 2026-11-11). To see FIFO full in the status, enable that
+    /// source; [`FifoRead::overflow`] reports it either way. A `fifo_full` flag is added once to
+    /// [`Stats::fifo_overflows`]. Works whether or not the driver is
     /// configured and does not change the validity state.
     pub async fn interrupt_status(&mut self) -> Result<InterruptStatus, Error<SPI::Error>> {
         let mut raw = [0u8; 2];

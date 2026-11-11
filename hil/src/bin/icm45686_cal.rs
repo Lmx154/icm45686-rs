@@ -19,7 +19,7 @@ use embassy_rp::spi::{self, Spi};
 use embassy_time::{Delay, Duration, Instant, Timer, with_timeout};
 use embedded_hal_async::spi::SpiDevice;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use icm45686::{ConfigError, Config, Error, Icm45686, Int1Config, Offsets, SensorPower};
+use icm45686::{Config, ConfigError, Error, Icm45686, Int1Config, Offsets, SensorPower};
 use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
@@ -211,7 +211,13 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
                 Ok(s) => {
                     if i >= discard {
                         n += 1;
-                        for (k, v) in s.accel.iter().chain(&s.gyro).chain(core::iter::once(&s.temp)).enumerate() {
+                        for (k, v) in s
+                            .accel
+                            .iter()
+                            .chain(&s.gyro)
+                            .chain(core::iter::once(&s.temp))
+                            .enumerate()
+                        {
                             let v = i64::from(*v);
                             sum[k] += v;
                             sq[k] += v * v;
@@ -332,8 +338,16 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
         let side = |c: f32, sign: f32| (c - sign * nominal).abs() <= STEP_WINDOW * nominal + allow;
         let half = (cp - cn) / 2.0;
         let cross = [
-            [(d[0].0[0] - d[1].0[0]) / 2.0, (d[0].0[1] - d[1].0[1]) / 2.0, (d[0].0[2] - d[1].0[2]) / 2.0],
-            [(d[0].1[0] - d[1].1[0]) / 2.0, (d[0].1[1] - d[1].1[1]) / 2.0, (d[0].1[2] - d[1].1[2]) / 2.0],
+            [
+                (d[0].0[0] - d[1].0[0]) / 2.0,
+                (d[0].0[1] - d[1].0[1]) / 2.0,
+                (d[0].0[2] - d[1].0[2]) / 2.0,
+            ],
+            [
+                (d[0].1[0] - d[1].1[0]) / 2.0,
+                (d[0].1[1] - d[1].1[1]) / 2.0,
+                (d[0].1[2] - d[1].1[2]) / 2.0,
+            ],
         ];
         defmt::info!(
             "[STAT] {=str}: half the difference of the + and - steps: changed axis {=f32} {=str} (expected {=f32}); cross-talk dAccel_mg={} dGyro_dps={}",
@@ -390,7 +404,11 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
                 Offsets::new().with_accel([v, 0, 0])
             };
             let m = self.set(&o, "set_offsets Ok").await;
-            dx[i] = if gyro { m.g[0] - zero.g[0] } else { m.a[0] - zero.a[0] };
+            dx[i] = if gyro {
+                m.g[0] - zero.g[0]
+            } else {
+                m.a[0] - zero.a[0]
+            };
             let sd = if gyro { base.g_sd[0] } else { base.a_sd[0] };
             defmt::info!(
                 "[STAT] {=str} X offset {=i16}: change {=f32} {=str} = {=f32} output LSB (baseline sd {=f32}, sd of mean {=f32})",
@@ -423,7 +441,11 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
             "+8191 and -8192 move the output in opposite directions by the full-range amounts within 10 %",
         );
         let m = self.set(&Offsets::new(), "set_offsets back to 0 Ok").await;
-        let back = if gyro { m.g[0] - zero.g[0] } else { m.a[0] - zero.a[0] };
+        let back = if gyro {
+            m.g[0] - zero.g[0]
+        } else {
+            m.a[0] - zero.a[0]
+        };
         self.verdict(
             back.abs() <= if gyro { NOISE_G_DPS } else { NOISE_A_MG },
             "back at the reference taken before the steps",
@@ -453,7 +475,11 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
         );
         for b in 1..5 {
             let m = |k: usize| {
-                x[k][b * 20..b * 20 + 20].iter().map(|v| i32::from(*v)).sum::<i32>() as f32 / 20.0
+                x[k][b * 20..b * 20 + 20]
+                    .iter()
+                    .map(|v| i32::from(*v))
+                    .sum::<i32>() as f32
+                    / 20.0
             };
             defmt::info!(
                 "[STAT] {=str} after power on, mean raw of samples {}..{}: {} {} {}",
@@ -477,13 +503,21 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
         };
         let t = Instant::now();
         let r = self.imu.set_power(&mut self.delay, off_a, off_g).await;
-        defmt::info!("[STAT] {=str} off: set_power took {=u64} ms", name, t.elapsed().as_millis());
+        defmt::info!(
+            "[STAT] {=str} off: set_power took {=u64} ms",
+            name,
+            t.elapsed().as_millis()
+        );
         if let Err(e) = &r {
             defmt::error!("set_power error: {}", defmt::Debug2Format(e));
         }
         self.verdict(r.is_ok(), "set_power off Ok");
         if let Ok(i) = r {
-            defmt::info!("[STAT] info after off: accel_odr_mhz={} gyro_odr_mhz={}", i.accel_odr_mhz, i.gyro_odr_mhz);
+            defmt::info!(
+                "[STAT] info after off: accel_odr_mhz={} gyro_odr_mhz={}",
+                i.accel_odr_mhz,
+                i.gyro_odr_mhz
+            );
         }
         self.verify("verify Ok with the sensor off").await;
         let m = self.measure(DISCARD).await;
@@ -491,12 +525,19 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
             defmt::info!(
                 "[STAT] gyro registers while off: mean raw={} sd raw={} (dps sd {}) stalls={} errors={}",
                 m.g_raw,
-                [m.g_sd[0] * self.cfg.gyro_fs.lsb_per_dps(), m.g_sd[1] * self.cfg.gyro_fs.lsb_per_dps(), m.g_sd[2] * self.cfg.gyro_fs.lsb_per_dps()],
+                [
+                    m.g_sd[0] * self.cfg.gyro_fs.lsb_per_dps(),
+                    m.g_sd[1] * self.cfg.gyro_fs.lsb_per_dps(),
+                    m.g_sd[2] * self.cfg.gyro_fs.lsb_per_dps()
+                ],
                 m.g_sd,
                 m.stalls,
                 m.errors
             );
-            self.verdict(within(sub(m.a, base.a), None, NOISE_A_MG), "accel unchanged while gyro off");
+            self.verdict(
+                within(sub(m.a, base.a), None, NOISE_A_MG),
+                "accel unchanged while gyro off",
+            );
         } else {
             defmt::info!(
                 "[STAT] accel registers while off: mean raw={} sd mg={} stalls={} errors={}",
@@ -505,14 +546,25 @@ impl<SPI: SpiDevice> Ctx<'_, SPI> {
                 m.stalls,
                 m.errors
             );
-            self.verdict(within(sub(m.g, base.g), None, NOISE_G_DPS), "gyro unchanged while accel off");
+            self.verdict(
+                within(sub(m.g, base.g), None, NOISE_G_DPS),
+                "gyro unchanged while accel off",
+            );
         }
         let t = Instant::now();
         let r = self
             .imu
-            .set_power(&mut self.delay, SensorPower::LowNoise, SensorPower::LowNoise)
+            .set_power(
+                &mut self.delay,
+                SensorPower::LowNoise,
+                SensorPower::LowNoise,
+            )
             .await;
-        defmt::info!("[STAT] {=str} on: set_power took {=u64} ms", name, t.elapsed().as_millis());
+        defmt::info!(
+            "[STAT] {=str} on: set_power took {=u64} ms",
+            name,
+            t.elapsed().as_millis()
+        );
         if let Err(e) = &r {
             defmt::error!("set_power error: {}", defmt::Debug2Format(e));
         }
@@ -583,7 +635,12 @@ async fn main(_spawner: Spawner) {
     c.init("init with the default configuration").await;
     c.verify("verify Ok after init").await;
     let cold = c.measure(DISCARD).await;
-    defmt::info!("[STAT] just after init: temp_c={} accel_mg={} gyro_dps={}", cold.temp_c, cold.a, cold.g);
+    defmt::info!(
+        "[STAT] just after init: temp_c={} accel_mg={} gyro_dps={}",
+        cold.temp_c,
+        cold.a,
+        cold.g
+    );
     Timer::after(Duration::from_secs(15)).await;
     let base = c.measure(DISCARD).await;
     defmt::info!("[STAT] after 15 s warm-up: temp_c={}", base.temp_c);
@@ -596,7 +653,10 @@ async fn main(_spawner: Spawner) {
         base.stalls,
         base.errors
     );
-    c.verdict(base.stalls == 0 && base.errors == 0, "baseline: no stalls, no read errors");
+    c.verdict(
+        base.stalls == 0 && base.errors == 0,
+        "baseline: no stalls, no read errors",
+    );
     // The last measurement with all offsets zero; checks 2 to 4 judge each step against it.
     let mut zero = base;
 
@@ -604,7 +664,8 @@ async fn main(_spawner: Spawner) {
     defmt::info!("[INFO] check 2: accel offsets");
     for axis in 0..3 {
         if c.time_left() {
-            c.axis(&mut zero, false, axis, 800, 800.0 * ACCEL_MG_PER_LSB).await;
+            c.axis(&mut zero, false, axis, 800, 800.0 * ACCEL_MG_PER_LSB)
+                .await;
         } else {
             c.skipped("check 2");
         }
@@ -614,7 +675,8 @@ async fn main(_spawner: Spawner) {
     defmt::info!("[INFO] check 3: gyro offsets");
     for axis in 0..3 {
         if c.time_left() {
-            c.axis(&mut zero, true, axis, 1333, 1333.0 * GYRO_DPS_PER_LSB).await;
+            c.axis(&mut zero, true, axis, 1333, 1333.0 * GYRO_DPS_PER_LSB)
+                .await;
         } else {
             c.skipped("check 3");
         }
@@ -633,7 +695,9 @@ async fn main(_spawner: Spawner) {
     // 5. configure keeps the offsets, init clears them.
     defmt::info!("[INFO] check 5: configure and init");
     if c.time_left() {
-        let o = Offsets::new().with_accel([800, 0, 0]).with_gyro([1333, 0, 0]);
+        let o = Offsets::new()
+            .with_accel([800, 0, 0])
+            .with_gyro([1333, 0, 0]);
         let m1 = c.set(&o, "set_offsets Ok").await;
         let cfg = c.cfg;
         let r = c.imu.configure(&mut c.delay, &cfg).await;
@@ -641,7 +705,10 @@ async fn main(_spawner: Spawner) {
             defmt::error!("configure error: {}", defmt::Debug2Format(e));
         }
         c.verdict(r.is_ok(), "configure Ok");
-        c.verdict(c.imu.offsets() == Some(o), "offsets() unchanged after configure");
+        c.verdict(
+            c.imu.offsets() == Some(o),
+            "offsets() unchanged after configure",
+        );
         c.verify("verify Ok after configure").await;
         let m2 = c.measure(DISCARD).await;
         let (da, dg) = (sub(m2.a, m1.a), sub(m2.g, m1.g));
@@ -657,13 +724,23 @@ async fn main(_spawner: Spawner) {
             within(da, None, NOISE_A_MG) && within(dg, None, NOISE_G_DPS),
             "mean unchanged by configure (offset still acts)",
         );
-        c.verdict((aa[0].abs() / 100.0 - 1.0).abs() <= 0.10, "accel X offset still acts after configure");
+        c.verdict(
+            (aa[0].abs() / 100.0 - 1.0).abs() <= 0.10,
+            "accel X offset still acts after configure",
+        );
         c.init("init Ok").await;
-        c.verdict(c.imu.offsets() == Some(Offsets::new()), "offsets() zero after init");
+        c.verdict(
+            c.imu.offsets() == Some(Offsets::new()),
+            "offsets() zero after init",
+        );
         c.verify("verify Ok after init").await;
         let m3 = c.measure(DISCARD).await;
         let (ba, bg) = (sub(m3.a, base.a), sub(m3.g, base.g));
-        defmt::info!("[STAT] after init vs baseline: dAccel_mg={} dGyro_dps={}", ba, bg);
+        defmt::info!(
+            "[STAT] after init vs baseline: dAccel_mg={} dGyro_dps={}",
+            ba,
+            bg
+        );
         c.verdict(
             within(ba, None, NOISE_A_MG) && within(bg, None, NOISE_G_DPS),
             "mean back at baseline after init",
@@ -689,13 +766,19 @@ async fn main(_spawner: Spawner) {
             .imu
             .set_power(&mut c.delay, SensorPower::Standby, SensorPower::LowNoise)
             .await;
-        defmt::info!("[STAT] set_power(accel Standby) returned {}", defmt::Debug2Format(&r));
+        defmt::info!(
+            "[STAT] set_power(accel Standby) returned {}",
+            defmt::Debug2Format(&r)
+        );
         c.verdict(
             matches!(r, Err(Error::InvalidConfig(ConfigError::AccelStandby))),
             "invalid request returns InvalidConfig(AccelStandby)",
         );
         let cfg = c.cfg;
-        c.verdict(c.imu.config() == Some(&cfg), "driver still configured with the same Config");
+        c.verdict(
+            c.imu.config() == Some(&cfg),
+            "driver still configured with the same Config",
+        );
         let ok = c.imu.read().await.is_ok();
         c.verdict(ok, "read Ok after the invalid request");
         c.verify("verify Ok after the invalid request").await;
@@ -706,7 +789,9 @@ async fn main(_spawner: Spawner) {
     // 7. soft_reset.
     defmt::info!("[INFO] check 7: soft_reset");
     if c.time_left() {
-        let o = Offsets::new().with_accel([800, 0, 0]).with_gyro([1333, 0, 0]);
+        let o = Offsets::new()
+            .with_accel([800, 0, 0])
+            .with_gyro([1333, 0, 0]);
         let r = c.imu.set_offsets(&mut c.delay, &o).await;
         c.verdict(r.is_ok(), "set_offsets Ok before soft_reset");
         let r = c.imu.soft_reset(&mut c.delay).await;
@@ -716,7 +801,10 @@ async fn main(_spawner: Spawner) {
         c.verdict(r.is_ok(), "soft_reset Ok");
         let nc = matches!(c.imu.read().await, Err(Error::NotConfigured));
         c.verdict(nc, "read returns NotConfigured after soft_reset");
-        c.verdict(c.imu.offsets().is_none(), "offsets() is None after soft_reset");
+        c.verdict(
+            c.imu.offsets().is_none(),
+            "offsets() is None after soft_reset",
+        );
         // Read-only look at what the device holds after the reset.
         let mut raw = [0u8; 4];
         for (k, a) in [
@@ -738,10 +826,16 @@ async fn main(_spawner: Spawner) {
             "[STAT] device offset registers right after soft_reset (accel X lo,hi gyro X lo,hi; set before: 0x20,0x03 0x35,0x05): {=[u8]:x}",
             raw
         );
-        c.verdict(raw == [0; 4], "soft reset cleared the offset registers on the device");
+        c.verdict(
+            raw == [0; 4],
+            "soft reset cleared the offset registers on the device",
+        );
         c.init("init works after soft_reset").await;
         c.verify("verify Ok after init").await;
-        c.verdict(c.imu.offsets() == Some(Offsets::new()), "offsets() zero after init");
+        c.verdict(
+            c.imu.offsets() == Some(Offsets::new()),
+            "offsets() zero after init",
+        );
     } else {
         c.skipped("check 7");
     }
@@ -751,7 +845,10 @@ async fn main(_spawner: Spawner) {
     if c.time_left() {
         let t = Instant::now();
         let r = c.imu.recover(&mut c.delay).await;
-        defmt::info!("[STAT] recover on a healthy bus took {=u64} us", t.elapsed().as_micros());
+        defmt::info!(
+            "[STAT] recover on a healthy bus took {=u64} us",
+            t.elapsed().as_micros()
+        );
         if let Err(e) = &r {
             defmt::error!("recover error: {}", defmt::Debug2Format(e));
         }
@@ -760,7 +857,10 @@ async fn main(_spawner: Spawner) {
         c.verdict(r.is_ok(), "soft_reset Ok");
         let t = Instant::now();
         let r = c.imu.recover(&mut c.delay).await;
-        defmt::info!("[STAT] recover when not configured took {=u64} us", t.elapsed().as_micros());
+        defmt::info!(
+            "[STAT] recover when not configured took {=u64} us",
+            t.elapsed().as_micros()
+        );
         c.verdict(
             matches!(r, Err(Error::NotConfigured)),
             "recover returns NotConfigured when not configured",
@@ -782,7 +882,9 @@ async fn main(_spawner: Spawner) {
         let r = c.imu.configure(&mut c.delay, &cfg2).await;
         c.verdict(r.is_ok(), "configure to 16 g / 250 dps Ok");
         let b2 = c.measure(DISCARD).await;
-        let o = Offsets::new().with_accel([2000, 0, 0]).with_gyro([2000, 0, 0]);
+        let o = Offsets::new()
+            .with_accel([2000, 0, 0])
+            .with_gyro([2000, 0, 0]);
         let m = c.set(&o, "set_offsets Ok at 16 g / 250 dps").await;
         let (da, dg) = (sub(m.a, b2.a), sub(m.g, b2.g));
         defmt::info!(
@@ -801,7 +903,10 @@ async fn main(_spawner: Spawner) {
     // Cleanup on every path: init writes the offsets to zero.
     defmt::info!("[INFO] cleanup");
     c.init("cleanup init Ok").await;
-    c.verdict(c.imu.offsets() == Some(Offsets::new()), "cleanup: offsets zero");
+    c.verdict(
+        c.imu.offsets() == Some(Offsets::new()),
+        "cleanup: offsets zero",
+    );
     c.verify("cleanup: verify Ok").await;
     defmt::info!("[STAT] run took {=u64} ms", c.t0.elapsed().as_millis());
     hil_common::exit(c.failures)

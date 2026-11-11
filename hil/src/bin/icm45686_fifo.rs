@@ -125,11 +125,7 @@ fn verdict(failures: &mut u32, ok: bool, name: &str) {
 
 fn bus_fail<E: core::fmt::Debug>(failures: &mut u32, what: &str, e: &E) {
     *failures += 1;
-    defmt::error!(
-        "[FAIL] {=str}: {}",
-        what,
-        defmt::Debug2Format(e)
-    );
+    defmt::error!("[FAIL] {=str}: {}", what, defmt::Debug2Format(e));
 }
 
 fn cfg_a() -> Config {
@@ -427,7 +423,11 @@ async fn check2<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, failures: &mut u32) {
                 "verify reports exactly GYRO_CONFIG0",
             );
         }
-        Ok(()) => verdict(failures, false, "verify reports exactly GYRO_CONFIG0 (got Ok)"),
+        Ok(()) => verdict(
+            failures,
+            false,
+            "verify reports exactly GYRO_CONFIG0 (got Ok)",
+        ),
         Err(e) => bus_fail(failures, "verify after raw write", &e),
     }
     if apply(imu, failures, "check 2 configure a", &a, false).await {
@@ -439,11 +439,7 @@ async fn check2<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, failures: &mut u32) {
 // Checks 3 and 4: count and decode (8 KB FIFO)
 // ---------------------------------------------------------------------------------------------
 
-async fn check3_4<SPI: SpiDevice>(
-    imu: &mut Icm45686<SPI>,
-    failures: &mut u32,
-    buf: &mut [u8],
-) {
+async fn check3_4<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, failures: &mut u32, buf: &mut [u8]) {
     defmt::info!("[INFO] check 3: FIFO count, 8 KB depth, 400 ms at 800 Hz");
     let c8 = cfg_c(FifoDepth::Kib8, FifoFormat::Standard);
     if !apply(imu, failures, "check 3 configure c8", &c8, false).await {
@@ -485,7 +481,8 @@ async fn check3_4<SPI: SpiDevice>(
     );
     verdict(
         failures,
-        (count as f32 - expect1).abs() <= 0.1 * expect1 && (le as f32 - expect2).abs() <= 0.1 * expect2,
+        (count as f32 - expect1).abs() <= 0.1 * expect1
+            && (le as f32 - expect2).abs() <= 0.1 * expect2,
         "FIFO count is frames, little endian, within 10 % of elapsed x 800",
     );
 
@@ -668,7 +665,11 @@ async fn check6<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, failures: &mut u32, buf
     match imu.fifo_count().await {
         Ok(n) => {
             defmt::info!("[STAT] fifo_count right after flush = {}", n);
-            verdict(failures, n <= 2, "fifo_count right after flush is at most 2");
+            verdict(
+                failures,
+                n <= 2,
+                "fifo_count right after flush is at most 2",
+            );
         }
         Err(e) => bus_fail(failures, "fifo_count after flush", &e),
     }
@@ -687,7 +688,6 @@ async fn check6<SPI: SpiDevice>(imu: &mut Icm45686<SPI>, failures: &mut u32, buf
     }
 }
 
-
 /// Not one of the eight checks: what the device does when the FIFO overflows (capacity, the full flag
 /// with and without its INT1 enable, the frames that survive).
 async fn overflow_probe<SPI: SpiDevice>(
@@ -703,7 +703,12 @@ async fn overflow_probe<SPI: SpiDevice>(
             .with_fifo_threshold(true)
             .with_fifo_full(int_full),
     );
-    defmt::info!("[INFO] overflow probe, INT1 fifo_full enabled = {} depth_bytes={} wait_ms={}", int_full, depth.bytes(), wait_ms);
+    defmt::info!(
+        "[INFO] overflow probe, INT1 fifo_full enabled = {} depth_bytes={} wait_ms={}",
+        int_full,
+        depth.bytes(),
+        wait_ms
+    );
     if !apply(imu, failures, "probe configure", &c, false).await {
         return;
     }
@@ -820,7 +825,11 @@ async fn check7<SPI: SpiDevice>(
         Ok(n) => defmt::info!("[STAT] fifo_count after the loop = {}", n),
         Err(e) => bus_fail(failures, "fifo_count after loop", &e),
     }
-    verdict(failures, !timeout && !read_err, "200 INT1 edges arrived, none timed out");
+    verdict(
+        failures,
+        !timeout && !read_err,
+        "200 INT1 edges arrived, none timed out",
+    );
     verdict(
         failures,
         valid == 1600 && total == 1600 && other == 0 && bad == 0,
@@ -1000,9 +1009,33 @@ async fn main(_spawner: Spawner) {
         check3_4(&mut imu, &mut failures, &mut buf).await;
         check5(&mut imu, &mut failures, &mut buf).await;
         check6(&mut imu, &mut failures, &mut buf).await;
-        overflow_probe(&mut imu, &mut failures, &mut buf, false, FifoDepth::Kib2, 300).await;
-        overflow_probe(&mut imu, &mut failures, &mut buf, true, FifoDepth::Kib2, 300).await;
-        overflow_probe(&mut imu, &mut failures, &mut buf, true, FifoDepth::Kib8, 800).await;
+        overflow_probe(
+            &mut imu,
+            &mut failures,
+            &mut buf,
+            false,
+            FifoDepth::Kib2,
+            300,
+        )
+        .await;
+        overflow_probe(
+            &mut imu,
+            &mut failures,
+            &mut buf,
+            true,
+            FifoDepth::Kib2,
+            300,
+        )
+        .await;
+        overflow_probe(
+            &mut imu,
+            &mut failures,
+            &mut buf,
+            true,
+            FifoDepth::Kib8,
+            800,
+        )
+        .await;
         check7(&mut imu, &mut failures, &mut dr, &mut buf).await;
         check8(&mut imu, &mut failures, &mut buf).await;
     }

@@ -304,14 +304,20 @@ impl PulseWidth {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]
 pub struct Int1Config {
-    /// New sample in the data registers (INT1_STATUS_EN_DRDY).
+    /// New sample in the data registers (INT1_STATUS_EN_DRDY). Measured on the MARV V2 board,
+    /// 2026-11-11: the rate of this event follows the data registers, so decimation lowers it (800,
+    /// 400 and 100 per second at 800 Hz with factors 1, 2 and 8; see [`Decimation`]); with different
+    /// accel and gyro rates and the FIFO off it follows the faster sensor; with the FIFO on and rates
+    /// equal after decimation it runs at that common rate.
     pub data_ready: bool,
     /// FIFO count reached the watermark (INT1_STATUS_EN_FIFO_THS).
     pub fifo_threshold: bool,
     /// FIFO full (INT1_STATUS_EN_FIFO_FULL). Enable it if the application wants the
     /// `fifo_full` flag of [`InterruptStatus`](crate::InterruptStatus): with only the threshold
-    /// source enabled the flag stays 0 (measured on the board, 2026-11-10). The driver's own
-    /// overflow detection in `fifo_read` uses the count and does not need it.
+    /// source enabled the flag stayed 0 through an overflow (measured on the board, 2026-11-10); with
+    /// this source enabled the flag was set after an overflow (measured on the MARV V2 board,
+    /// 2026-11-11). To see FIFO full in the status, enable this source. The driver's own overflow
+    /// detection in `fifo_read` uses the count and does not need it.
     pub fifo_full: bool,
     /// UI AGC ready (INT1_STATUS_EN_AP_AGC_RDY).
     pub agc_ready: bool,
@@ -359,9 +365,20 @@ impl Default for Int1Config {
 pub enum FifoMode {
     /// Bypass: the FIFO is disabled (code 0).
     Off = 0,
-    /// Stream: the oldest frames are overwritten when the FIFO is full (code 1).
+    /// Stream: the oldest frames are overwritten when the FIFO is full (code 1). Measured on the
+    /// MARV V2 board, 2026-11-11 (2 KB FIFO, 16-byte frames, 800 Hz, left unread for 350 ms): the
+    /// count saturates at capacity + 2 (130 where the capacity is 128) and a read returned 129
+    /// frames with 1 left. The first two frames returned are stale (the earliest two since the
+    /// flush), then the timestamps jump, then the newest 127 frames follow contiguously, the last
+    /// one from the time of the read. After a read that reports an overflow in stream mode the
+    /// application must discard the first two frames returned (or flush the FIFO); the frames from
+    /// the third on are the newest. The read's overflow flag was set and counted in `stats()`.
     Stream = 1,
-    /// Stop on full: new frames are dropped when the FIFO is full (code 2).
+    /// Stop on full: new frames are dropped when the FIFO is full (code 2). Measured on the same
+    /// board and day, same conditions: the count stops at the capacity (128), a read returned 127
+    /// frames with 1 left, and they are the OLDEST frames, from the start with no timestamp jump;
+    /// what arrived after the FIFO filled is lost. The read's overflow flag was set and counted in
+    /// `stats()`.
     StopOnFull = 2,
 }
 
@@ -412,7 +429,17 @@ pub enum FifoFormat {
     HighResolution,
 }
 
-/// Timestamp resolution, TMST_RESOL (16.34, p84).
+/// Timestamp resolution, TMST_RESOL (16.34, p84): the nominal microseconds per tick.
+///
+/// Measured on the MARV V2 board, 2026-11-11, with the external 32 kHz clock on CLKIN: consecutive
+/// frames at 200 Hz were 5022.5 us apart in timestamp units, at 1 us per tick (5022.5 ticks) and at
+/// 16 us per tick (313.9 ticks), while the MCU clock measured 5000.5 us per frame and the output
+/// rate on that clock was exact (799.98 Hz at the 800 Hz setting). So the tick runs about 0.44 %
+/// fast against real time even with the external clock: it does not follow that clock. Timestamps
+/// are for spacing frames relative to each other. An application that needs real time calibrates
+/// the tick period against its own clock and converts with
+/// [`timestamp_us_with_period`](crate::fifo::timestamp_us_with_period) (here about 0.9956 us per tick
+/// at the 1 us setting).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TimestampResolution {
@@ -423,6 +450,18 @@ pub enum TimestampResolution {
 }
 
 /// FIFO decimation factor of one sensor, GYRO_FIFO_ODR_DEC / ACCEL_FIFO_ODR_DEC (16.39, p87).
+///
+/// Measured on the MARV V2 board, 2026-11-11, with the FIFO on at 800 Hz and factors 1, 2 and 8:
+/// the INT1 data-ready rate was 800, 400 and 100 per second and each sensor's data registers changed
+/// 800, 400 and 100 times per second; the FIFO frame rate followed (0.99977, 0.49985 and 0.12546 of
+/// 800 Hz on the MCU clock). So decimation lowers the rate of the data registers and of INT1
+/// data-ready as well, not only what goes into the FIFO: an application that polls `read()` or counts
+/// INT1 edges sees the divided rate. Other factors were not measured. With the FIFO off the driver
+/// does not write the decimation (the register keeps its reset value 0), so a factor set in
+/// [`FifoConfig`] has no effect then: measured with factor 8 and the FIFO off, INT1 and both
+/// registers ran at 800 per second; [`Config::validate`] accepts such a configuration. Whether the
+/// device would decimate the registers with the FIFO off if the register were written is not
+/// measured, because the driver never writes it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Decimation {
@@ -477,7 +516,8 @@ pub struct FifoConfig {
     /// Timestamp field in the frame (FIFO_TMST_FSYNC_EN). The field exists only in 16-byte and
     /// 20-byte frames (5.2, p40).
     pub timestamp: bool,
-    /// Timestamp resolution.
+    /// Timestamp resolution. The tick is nominal and runs about 0.44 % fast against real time, also
+    /// with the external clock (see [`TimestampResolution`]).
     pub timestamp_resolution: TimestampResolution,
     /// Watermark in frames; 0 disables it. For N >= 1 the driver writes N + 1 to FIFO_WM_TH
     /// (vendor erratum AN-000364: never read the FIFO empty in stream mode), so reading N frames
@@ -489,9 +529,11 @@ pub struct FifoConfig {
     pub watermark: u16,
     /// FIFO size.
     pub depth: FifoDepth,
-    /// Decimation of the accel data written to the FIFO.
+    /// Decimation of the accel data. Applies with the FIFO on; it lowers the data-register and INT1
+    /// rate too (see [`Decimation`]). Not written, so without effect, with the FIFO off.
     pub accel_decimation: Decimation,
-    /// Decimation of the gyro data written to the FIFO.
+    /// Decimation of the gyro data. Applies with the FIFO on; it lowers the data-register and INT1
+    /// rate too (see [`Decimation`]). Not written, so without effect, with the FIFO off.
     pub gyro_decimation: Decimation,
 }
 
@@ -578,9 +620,18 @@ pub struct Config {
     pub accel_fs: AccelFullScale,
     /// Gyroscope full scale.
     pub gyro_fs: GyroFullScale,
-    /// Accelerometer output data rate.
+    /// Accelerometer output data rate. Measured on the MARV V2 board, 2026-11-11, at 800 Hz and
+    /// 200 Hz in both assignments: with the FIFO off the two sensors may run at different rates;
+    /// INT1 data-ready then follows the faster sensor (799.98 edges per second) and each sensor's
+    /// data registers change at its own rate (800 and 200 per second), so `read()` returns a new
+    /// accel value or a new gyro value at those rates, not both at every INT1 edge. With the FIFO on,
+    /// [`Config::validate`] refuses different rates in one frame ([`ConfigError::FifoRateMismatch`](crate::ConfigError::FifoRateMismatch))
+    /// unless the decimation makes them equal. Then, measured with 800 Hz / 200 Hz and decimation 4
+    /// on the faster sensor (and the reverse), frames and INT1 data-ready arrived at the common rate
+    /// (200 per second), every header was 0x68, no frame carried the rate-change flag and none
+    /// carried the invalid-marker value.
     pub accel_odr: Odr,
-    /// Gyroscope output data rate.
+    /// Gyroscope output data rate. See [`Config::accel_odr`] for the two rates and the FIFO.
     pub gyro_odr: Odr,
     /// Accelerometer power state.
     pub accel_power: SensorPower,

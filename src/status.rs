@@ -24,9 +24,12 @@ pub struct FifoRead {
     /// the applied configuration, which is a FIFO that is full and, in stream mode, is overwriting
     /// its oldest frames; `Some(false)` when it was not. In stream mode the count saturates two
     /// frames above the nominal capacity (measured on the board, 2026-11-10: 130 with the 2 KB depth
-    /// and 16-byte frames, 514 with 8 KB). After an overflow the first two frames returned are stale
-    /// and the stream has lost data: call `fifo_flush` and discard what was read. `None` when no count was read (`fifo_read_exact`):
-    /// then nothing is known about an overflow.
+    /// and 16-byte frames, 514 with 8 KB). After an overflow in stream mode the stream has lost data
+    /// and the first two frames returned are stale (measured on the MARV V2 board, 2026-11-11: a
+    /// timestamp jump follows them and the rest are contiguous up to the time of the read): discard
+    /// those two, or call `fifo_flush` and discard what was read. In stop-on-full mode the count stops
+    /// at the capacity and the frames read are the oldest, with no jump; later frames are lost.
+    /// `None` when no count was read (`fifo_read_exact`): then nothing is known about an overflow.
     pub overflow: Option<bool>,
 }
 
@@ -45,9 +48,11 @@ impl FifoRead {
 /// INT1_STATUS0 and INT1_STATUS1 as read. Both registers clear on read (R/C, 16.24, p76; 16.25,
 /// p77): a flag that is not looked at in the value this returns is gone. Both flags are the state
 /// at the moment of the read and the read clears them: after the FIFO has been drained they read 0,
-/// so read the status BEFORE draining the FIFO. The `fifo_full` flag exists only when
-/// [`Int1Config::fifo_full`](crate::Int1Config::fifo_full) is enabled (measured on the board,
-/// 2026-11-10: with only the threshold source enabled it stays 0).
+/// so read the status BEFORE draining the FIFO. The `fifo_full` flag: with only the threshold source
+/// enabled it stayed 0 through an overflow (measured on the board, 2026-11-10); with its INT1 source
+/// ([`Int1Config::fifo_full`](crate::Int1Config::fifo_full)) enabled it was set after an overflow
+/// (measured on the MARV V2 board, 2026-11-11). To see FIFO full here, enable that source;
+/// [`FifoRead::overflow`] reports it either way.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]

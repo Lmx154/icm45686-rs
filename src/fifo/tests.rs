@@ -316,6 +316,21 @@ fn conversions() {
     assert_eq!(timestamp_us(0, TimestampResolution::Us16), 0);
 }
 
+#[test]
+fn timestamp_with_a_caller_period_is_ticks_times_the_period_across_the_wrap() {
+    // Hand-computed: 1000 * 0.5 = 500 and 65535 * 0.5 = 32767.5 are exact in f32.
+    assert_eq!(timestamp_us_with_period(1000, 0.5), 500.0);
+    assert_eq!(timestamp_us_with_period(u16::MAX, 0.5), 32_767.5);
+    assert_eq!(timestamp_us_with_period(0, 0.9956), 0.0);
+    // The nominal period reproduces the integer helper.
+    assert_eq!(timestamp_us_with_period(1000, 1.0), 1000.0);
+    assert_eq!(timestamp_us_with_period(u16::MAX, 16.0), 1_048_560.0);
+    // 10 follows 65530 across the wrap: 16 ticks, 16 * 0.9956 = 15.9296 us.
+    let ticks = 10u16.wrapping_sub(65_530);
+    assert_eq!(ticks, 16);
+    assert!((timestamp_us_with_period(ticks, 0.9956) - 15.9296).abs() < 1e-4);
+}
+
 fn flags_byte(f: &FifoFlags) -> u8 {
     u8::from(f.timestamp_field) << 3
         | u8::from(f.fsync_tag) << 2

@@ -160,8 +160,10 @@ pub const fn smc_timestamp(c: &Config) -> u8 {
     v
 }
 
-/// ODR_DECIMATE_CONFIG (16.39, p87): gyro in bits 7:4, accel in bits 3:0. Decimation applies to the
-/// FIFO only, so it is 0 when the FIFO is off.
+/// ODR_DECIMATE_CONFIG (16.39, p87): gyro in bits 7:4, accel in bits 3:0. The driver writes the
+/// decimation only when the FIFO is on and the reset value 0 when it is off. With the FIFO on the
+/// decimation also lowers the data-register and INT1 data-ready rate (measured on the MARV V2 board,
+/// 2026-11-11).
 pub const fn odr_decimate_config(c: &Config) -> u8 {
     if c.fifo.enabled() {
         (c.fifo.gyro_decimation.code() << 4) | c.fifo.accel_decimation.code()

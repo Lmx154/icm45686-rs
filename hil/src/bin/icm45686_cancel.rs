@@ -367,7 +367,15 @@ async fn phase3<SPI: SpiDevice>(
                 }
                 continue;
             }
-            attempt(imu, delay, lim, &mut st, u64::from(k) % (t_us + 11), deadline).await?;
+            attempt(
+                imu,
+                delay,
+                lim,
+                &mut st,
+                u64::from(k) % (t_us + 11),
+                deadline,
+            )
+            .await?;
             if (k + 1) % BLOCK == 0 {
                 do_verify(imu, delay, &mut st).await?;
             }
@@ -490,11 +498,17 @@ async fn main(_spawner: Spawner) {
             }
         }
         defmt::info!("[STAT] phase 0 wrong_of_1000={}", wrong);
-        verdict(&mut failures, wrong == 0 && timing_errors == 0, "phase 0 reference");
+        verdict(
+            &mut failures,
+            wrong == 0 && timing_errors == 0,
+            "phase 0 reference",
+        );
         if wrong != 0 || timing_errors != 0 {
             break 'p0;
         }
-        if u32::try_from(t_us + 11).map_or(true, |nd| nd * BLOCK + CONTROL_CANCELS as u32 + DR_CANCELS > MAX_CANCELS) {
+        if u32::try_from(t_us + 11).map_or(true, |nd| {
+            nd * BLOCK + CONTROL_CANCELS as u32 + DR_CANCELS > MAX_CANCELS
+        }) {
             defmt::error!("T too large for the 2500-cancel bound");
             verdict(&mut failures, false, "phase 0 cancel bound");
             break 'p0;
