@@ -1,6 +1,6 @@
 # ICM-45686 device facts (MARV V2 Rev 1)
 
-Copied from the MARV V2 firmware repository's `docs/devices.md` and `docs/pinout.md`. Page numbers are PDF pages of the datasheet listed at the end. Items marked UNKNOWN or "unverified" have not been checked against the datasheet or on hardware. "Measured" means measured on this board.
+The device and board facts this driver was written against, taken from the MARV V2 firmware repository's `docs/devices.md` and `docs/pinout.md`. Page numbers are PDF pages of the datasheet listed at the end. Items marked UNKNOWN or "unverified" have not been checked against the datasheet or on hardware. "Measured" means measured on this board.
 
 ## ICM-45686 (TDK InvenSense, IMU on SPI0)
 

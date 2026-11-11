@@ -11,26 +11,7 @@
 //! Units: [`RawSample::accel_ms2`] is m/s^2, [`RawSample::gyro_rads`] is rad/s,
 //! [`RawSample::temperature_c`] is degrees Celsius.
 //!
-//! Async:
-//! ```ignore
-//! let mut imu = icm45686::Icm45686::new(spi_device);
-//! let config = icm45686::Config::new()
-//!     .with_int1(icm45686::Int1Config::new().with_data_ready(true));
-//! imu.init(&mut delay, &config).await?;
-//! loop {
-//!     int1.wait_for_rising_edge().await;
-//!     let sample = imu.read().await?;
-//!     let accel = sample.accel_ms2(config.accel_fs);
-//! }
-//! ```
-//!
-//! Blocking:
-//! ```ignore
-//! let mut imu = icm45686::blocking::Icm45686::new(spi_device);
-//! imu.init(&mut delay, &icm45686::Config::default())?;
-//! let sample = imu.read()?;
-//! let temperature = sample.temperature_c();
-//! ```
+//! For a complete example, see README.md, whose example is compiled by `cargo test`.
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_code)]
 #![cfg_attr(
@@ -191,6 +172,14 @@ enum Calibration {
 }
 
 /// ICM-45686 on an async SPI device (mode 0 or 3, up to 24 MHz).
+///
+/// The bus must be SPI mode 0 or 3 (AP_SPI_MODE, datasheet p90) and run at 24 MHz at most (p49).
+///
+/// Never cancel a bus transfer in flight: do not put a timeout or `select` around a driver call
+/// that is on the bus; put the timeout around the wait for data-ready. On embassy-rp 0.10 a
+/// cancelled SPI transfer leaves stale bytes in the receive FIFO, and with a shared-bus wrapper
+/// cancelled transfers wrote stray registers into this sensor, which stopped answering until the
+/// board was power-cycled. [`recover`](Self::recover) is the way back.
 ///
 /// # Validity
 ///

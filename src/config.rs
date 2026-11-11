@@ -332,8 +332,8 @@ pub struct Int1Config {
 }
 
 impl Int1Config {
-    /// No event enabled; pulse, active high, push-pull (what `init` configures today), 8 us (the
-    /// device's reset value).
+    /// No event enabled; pulse, active high, push-pull (the default INT1 configuration, the one
+    /// `Config::default()` carries), 8 us (the device's reset value).
     pub const fn new() -> Self {
         Self {
             data_ready: false,
