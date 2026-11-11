@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 589bf5e65fc8a03d3728fee0a55af77da55b58901253ecdd9e52819e019ef33b # shrinks to c = Config { accel_fs: G32, gyro_fs: Dps4000, accel_odr: Hz6400, gyro_odr: Hz6400, accel_power: LowNoise, gyro_power: LowNoise, accel_bandwidth: Bypass, gyro_bandwidth: Bypass, accel_anti_alias: None, gyro_anti_alias: None, clock: Internal, rtc_align: false, int1: Int1Config { data_ready: false, fifo_threshold: false, fifo_full: false, agc_ready: false, mode: Latched, polarity: ActiveLow, drive: PushPull, pulse_width: Us100 }, fifo: FifoConfig { mode: Off, format: Standard, accel: false, gyro: false, timestamp: false, timestamp_resolution: Us1, watermark: 0, depth: Kib2, accel_decimation: Div1, gyro_decimation: Div1 }, spi_slew: Ns38 }, junk = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 102, 0, 0, 0, 0, 0, 0]

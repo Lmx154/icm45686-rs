@@ -5,10 +5,6 @@ use crate::config::{AccelFullScale, GyroFullScale};
 const G: f32 = 9.80665;
 const DEG_TO_RAD: f32 = core::f32::consts::PI / 180.0;
 
-const fn word(b: &[u8; 14], i: usize) -> i16 {
-    i16::from_le_bytes([b[2 * i], b[2 * i + 1]])
-}
-
 /// One sample as the device reports it, in LSB.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -23,11 +19,36 @@ pub struct RawSample {
 
 impl RawSample {
     /// Decodes registers 0x00..=0x0D (little-endian words: accel XYZ, gyro XYZ, temperature).
+    #[inline]
     pub const fn decode(b: &[u8; 14]) -> Self {
+        let [
+            ax0,
+            ax1,
+            ay0,
+            ay1,
+            az0,
+            az1,
+            gx0,
+            gx1,
+            gy0,
+            gy1,
+            gz0,
+            gz1,
+            t0,
+            t1,
+        ] = *b;
         Self {
-            accel: [word(b, 0), word(b, 1), word(b, 2)],
-            gyro: [word(b, 3), word(b, 4), word(b, 5)],
-            temp: word(b, 6),
+            accel: [
+                i16::from_le_bytes([ax0, ax1]),
+                i16::from_le_bytes([ay0, ay1]),
+                i16::from_le_bytes([az0, az1]),
+            ],
+            gyro: [
+                i16::from_le_bytes([gx0, gx1]),
+                i16::from_le_bytes([gy0, gy1]),
+                i16::from_le_bytes([gz0, gz1]),
+            ],
+            temp: i16::from_le_bytes([t0, t1]),
         }
     }
 

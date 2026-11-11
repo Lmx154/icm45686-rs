@@ -7,7 +7,10 @@ use core::task::{Context, Poll, Waker};
 use embedded_hal::delay::DelayNs;
 use embedded_hal::spi::{ErrorType, Operation, SpiDevice};
 
-use crate::{Config, Error, RawSample};
+use crate::{
+    Config, Error, FifoRead, Info, InterruptStatus, Offsets, RawSample, SelfTestConfig,
+    SelfTestReport, SensorPower, Stats,
+};
 
 /// Blocking bus presented as an async one.
 struct Bus<SPI>(SPI);
@@ -75,13 +78,114 @@ impl<SPI: SpiDevice> Icm45686<SPI> {
         &mut self,
         delay: &mut impl DelayNs,
         config: &Config,
-    ) -> Result<(), Error<SPI::Error>> {
+    ) -> Result<Info, Error<SPI::Error>> {
         block_on(self.inner.init(&mut Wait(delay), config))
+    }
+
+    /// See [`crate::Icm45686::configure`].
+    pub fn configure(
+        &mut self,
+        delay: &mut impl DelayNs,
+        config: &Config,
+    ) -> Result<Info, Error<SPI::Error>> {
+        block_on(self.inner.configure(&mut Wait(delay), config))
+    }
+
+    /// See [`crate::Icm45686::config`].
+    pub fn config(&self) -> Option<&Config> {
+        self.inner.config()
+    }
+
+    /// See [`crate::Icm45686::offsets`].
+    pub fn offsets(&self) -> Option<Offsets> {
+        self.inner.offsets()
+    }
+
+    /// See [`crate::Icm45686::set_offsets`].
+    pub fn set_offsets(
+        &mut self,
+        delay: &mut impl DelayNs,
+        offsets: &Offsets,
+    ) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.set_offsets(&mut Wait(delay), offsets))
+    }
+
+    /// See [`crate::Icm45686::set_power`].
+    pub fn set_power(
+        &mut self,
+        delay: &mut impl DelayNs,
+        accel: SensorPower,
+        gyro: SensorPower,
+    ) -> Result<Info, Error<SPI::Error>> {
+        block_on(self.inner.set_power(&mut Wait(delay), accel, gyro))
+    }
+
+    /// See [`crate::Icm45686::soft_reset`].
+    pub fn soft_reset(&mut self, delay: &mut impl DelayNs) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.soft_reset(&mut Wait(delay)))
+    }
+
+    /// See [`crate::Icm45686::self_test`].
+    pub fn self_test(
+        &mut self,
+        delay: &mut impl DelayNs,
+        config: &SelfTestConfig,
+    ) -> Result<SelfTestReport, Error<SPI::Error>> {
+        block_on(self.inner.self_test(&mut Wait(delay), config))
+    }
+
+    /// See [`crate::Icm45686::verify`].
+    pub fn verify(&mut self, delay: &mut impl DelayNs) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.verify(&mut Wait(delay)))
+    }
+
+    /// See [`crate::Icm45686::recover`].
+    pub fn recover(&mut self, delay: &mut impl DelayNs) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.recover(&mut Wait(delay)))
     }
 
     /// See [`crate::Icm45686::read`].
     pub fn read(&mut self) -> Result<RawSample, Error<SPI::Error>> {
         block_on(self.inner.read())
+    }
+
+    /// See [`crate::Icm45686::fifo_read`].
+    pub fn fifo_read(&mut self, buf: &mut [u8]) -> Result<FifoRead, Error<SPI::Error>> {
+        block_on(self.inner.fifo_read(buf))
+    }
+
+    /// See [`crate::Icm45686::fifo_read_exact`].
+    pub fn fifo_read_exact(
+        &mut self,
+        buf: &mut [u8],
+        frames: usize,
+    ) -> Result<FifoRead, Error<SPI::Error>> {
+        block_on(self.inner.fifo_read_exact(buf, frames))
+    }
+
+    /// See [`crate::Icm45686::fifo_count`].
+    pub fn fifo_count(&mut self) -> Result<u16, Error<SPI::Error>> {
+        block_on(self.inner.fifo_count())
+    }
+
+    /// See [`crate::Icm45686::fifo_flush`].
+    pub fn fifo_flush(&mut self, delay: &mut impl DelayNs) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.fifo_flush(&mut Wait(delay)))
+    }
+
+    /// See [`crate::Icm45686::interrupt_status`].
+    pub fn interrupt_status(&mut self) -> Result<InterruptStatus, Error<SPI::Error>> {
+        block_on(self.inner.interrupt_status())
+    }
+
+    /// See [`crate::Icm45686::stats`].
+    pub const fn stats(&self) -> &Stats {
+        self.inner.stats()
+    }
+
+    /// See [`crate::Icm45686::info`].
+    pub const fn info(&self) -> Option<Info> {
+        self.inner.info()
     }
 
     /// See [`crate::Icm45686::read_register`].

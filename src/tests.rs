@@ -135,13 +135,13 @@ fn blocking_init_then_read() {
         *b = if i % 2 == 0 { i as u8 + 1 } else { 0 };
     }
     let mut imu = blocking::Icm45686::new(FakeSpi { regs });
-    let config = Config {
-        accel_fs: AccelFullScale::G8,
-        gyro_fs: GyroFullScale::Dps500,
-        odr: Odr::Hz200,
-        clock: ClockSource::ExternalClkin,
-        int1_data_ready: true,
-    };
+    let config = Config::new()
+        .with_accel_fs(AccelFullScale::G8)
+        .with_gyro_fs(GyroFullScale::Dps500)
+        .with_accel_odr(Odr::Hz200)
+        .with_gyro_odr(Odr::Hz200)
+        .with_clock(ClockSource::ExternalClkin)
+        .with_int1(Int1Config::new().with_data_ready(true));
     imu.init(&mut NoDelay, &config).unwrap();
     let s = imu.read().unwrap();
     assert_eq!(s.accel, [1, 3, 5]);
@@ -174,12 +174,17 @@ fn wrong_id_and_bad_odr() {
         imu.init(&mut NoDelay, &Config::default()),
         Err(Error::WrongId { found: 0 })
     );
-    let low_power = Config {
-        odr: Odr::Hz6_25,
-        ..Config::default()
-    };
+    let low_power = Config::new()
+        .with_accel_odr(Odr::Hz6_25)
+        .with_gyro_odr(Odr::Hz6_25);
     assert_eq!(
         imu.init(&mut NoDelay, &low_power),
-        Err(Error::InvalidConfig)
+        Err(Error::InvalidConfig(ConfigError::AccelOdrLowPowerOnly))
     );
 }
+
+mod config_tests;
+mod images;
+mod model;
+mod plan_tests;
+pub(crate) mod props;

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 755a5de7f3452e15bdf06c64d2f9bad61c42f5cab107c37d027001bbbdf04188 # shrinks to a = [], g = [], ag = [], h = [(FifoFlags { timestamp_field: false, fsync_tag: false, accel_odr_changed: false, gyro_odr_changed: false }, [0, 0, 0], [-1, 0, 0], 0, 0)]

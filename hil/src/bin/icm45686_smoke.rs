@@ -18,7 +18,9 @@ use embassy_rp::spi::{self, Spi};
 use embassy_time::{Delay, Duration, Instant, with_timeout};
 use embedded_hal_async::spi::SpiDevice;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use icm45686::{AccelFullScale, ClockSource, Config, GyroFullScale, Icm45686, Odr, RawSample};
+use icm45686::{
+    AccelFullScale, ClockSource, Config, GyroFullScale, Icm45686, Int1Config, Odr, RawSample,
+};
 use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
@@ -275,12 +277,10 @@ async fn main(_spawner: Spawner) {
         let device = ExclusiveDevice::new_no_delay(bus, cs).unwrap();
         let mut imu = Icm45686::new(device);
         let mut delay = Delay;
-        let base = Config {
-            accel_fs: AccelFullScale::G4,
-            gyro_fs: GyroFullScale::Dps250,
-            int1_data_ready: true,
-            ..Config::default()
-        };
+        let base = Config::new()
+            .with_accel_fs(AccelFullScale::G4)
+            .with_gyro_fs(GyroFullScale::Dps250)
+            .with_int1(Int1Config::new().with_data_ready(true));
 
         for (name, odr, clock, tol) in [
             (
@@ -302,7 +302,10 @@ async fn main(_spawner: Spawner) {
                 0.0005,
             ),
         ] {
-            let config = Config { odr, clock, ..base };
+            let config = base
+                .with_accel_odr(odr)
+                .with_gyro_odr(odr)
+                .with_clock(clock);
             if let Err(e) = imu.init(&mut delay, &config).await {
                 failures += 1;
                 defmt::error!("[FAIL] init ({=str}): {}", name, defmt::Debug2Format(&e));
@@ -331,12 +334,10 @@ async fn main(_spawner: Spawner) {
         let cs = Output::new(p.PIN_20.reborrow(), Level::High);
         let device = ExclusiveDevice::new_no_delay(bus, cs).unwrap();
         let mut imu = icm45686::blocking::Icm45686::new(device);
-        let config = Config {
-            accel_fs: AccelFullScale::G4,
-            gyro_fs: GyroFullScale::Dps250,
-            ..Config::default()
-        };
-        match imu.init(&mut Delay, &config).and_then(|()| imu.read()) {
+        let config = Config::new()
+            .with_accel_fs(AccelFullScale::G4)
+            .with_gyro_fs(GyroFullScale::Dps250);
+        match imu.init(&mut Delay, &config).and_then(|_| imu.read()) {
             Ok(s) => at_rest(&mut failures, "blocking front-end", &s, &config),
             Err(e) => {
                 failures += 1;
