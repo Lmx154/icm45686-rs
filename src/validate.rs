@@ -50,7 +50,7 @@ pub enum ConfigError {
     /// RTC_ALIGN is set but the clock is internal; the RTC is not running (16.37, p86).
     RtcAlignWithoutClkin,
     /// The 100 us INT1 pulse is "only if ODR < 4 kHz" and 8 us is "required if ODR >= 4 kHz"
-    /// (19.53, p181), but an output data rate is 6.4 kHz.
+    /// (19.52, p181), but an output data rate is 6.4 kHz.
     Int1LongPulseAtHighOdr,
     /// The write plan has more steps than [`crate::plan::PLAN_CAPACITY`]. No valid configuration
     /// reaches it (a test checks the largest); the error exists so that a step is never dropped.

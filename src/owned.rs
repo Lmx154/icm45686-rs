@@ -20,7 +20,7 @@
 //!   datasheet does not say that it reads back as written. Bits 4:0 and 7 are reserved.
 //! - Every other bit of a register that this crate keeps at its reset value (reserved or out of
 //!   scope fields: p66; 16.17 p70, 16.26 p78, 16.32 p82, 16.33 p83, 16.34 p84, 16.48 p93,
-//!   19.47 p178, 19.53 p181, 20.7 p190, 20.11 p192, 21.7 p194).
+//!   19.47 p178, 19.52 p181, 20.7 p190, 20.11 p192, 21.7 p194).
 //! - The soft-reset bit SOFT_RST and the IREG_DONE status bit of REG_MISC2 (16.84, p109), the
 //!   status flags (INT1_STATUS0, 16.24, p76) and the data registers are not configuration and not
 //!   listed.
@@ -244,14 +244,14 @@ pub(crate) fn owned_registers(c: &Config, offsets: &Offsets) -> OwnedRegisters {
     if c.clock == ClockSource::ExternalClkin {
         o.indirect(reg::SIFS_I3C_STC_CFG, reg::I3C_STC_MODE, 0);
     }
-    // INT1_TPULSE_DURATION (19.53, p181).
+    // INT0_TPULSE_DURATION (19.52, p181).
     o.indirect(
-        reg::INT_PULSE_MIN_ON_INTF1,
-        reg::INT_PULSE_MIN_ON_INTF1_FIELDS,
+        reg::INT_PULSE_MIN_ON_INTF0,
+        reg::INT_PULSE_MIN_ON_INTF0_FIELDS,
         image::int1_pulse_width(c),
     );
     // GYRO_X, Y, Z_OFFUSER, low byte and bits 13:8 (20.1-20.6, p189-p190): the applied offsets, in
-    // address order between INT1_TPULSE_DURATION and GYRO_SRC_CTRL.
+    // address order between INT0_TPULSE_DURATION and GYRO_SRC_CTRL.
     let [gxl, gxh, gyl, gyh, gzl, gzh, axl, axh, ayl, ayh, azl, azh] = offsets.registers();
     for (addr, value, mask) in [gxl, gxh, gyl, gyh, gzl, gzh] {
         o.indirect(addr, mask, value);

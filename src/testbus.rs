@@ -178,8 +178,8 @@ impl Chip {
             (reg::SMC_CONTROL_0, reg::SMC_CONTROL_0_RESET),
             (reg::SIFS_I3C_STC_CFG, reg::SIFS_I3C_STC_CFG_RESET),
             (
-                reg::INT_PULSE_MIN_ON_INTF1,
-                reg::INT_PULSE_MIN_ON_INTF1_RESET,
+                reg::INT_PULSE_MIN_ON_INTF0,
+                reg::INT_PULSE_MIN_ON_INTF0_RESET,
             ),
             (reg::IPREG_SYS1_REG_166, reg::IPREG_SYS1_REG_166_RESET),
             (reg::IPREG_SYS1_REG_172, reg::IPREG_SYS1_REG_172_RESET),

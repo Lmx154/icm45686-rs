@@ -103,8 +103,7 @@ In the API but never set explicitly by any program in `hil/src/bin`, so not exer
 - `with_accel_bandwidth`, `with_gyro_bandwidth` (`UiBandwidth`).
 - `with_accel_anti_alias`, `with_gyro_anti_alias` (`AntiAlias`). The default choice with `ExternalClkin`, which `icm45686_smoke` and `icm45686_modes` use, does write the FIR and interpolator.
 - `with_rtc_align`, `with_spi_slew` (`SpiSlew`).
-- INT1 `with_polarity`, `with_drive`, `with_pulse_width`, `with_mode(Int1Mode::Latched)`, `with_agc_ready`.
-- Full scales other than 4 g and 16 g (accel) and 250 dps (gyro) are not set explicitly. No test program sets SPI mode 3 or a clock other than 8 MHz (the `spi_cancel` experiment excepted).
+- Full scales other than 4 g and 16 g (accel) and 250 dps (gyro) are not set explicitly. Only `icm45686_soak` sets SPI mode 3 and a clock other than 8 MHz (18.75 MHz); the `spi_cancel` experiment is excepted.
 
 ## Measured on the MARV V2 Rev 1 board
 
@@ -124,7 +123,7 @@ All figures: MARV V2 Rev 1 board, RP2354B at 150 MHz, embassy-rp 0.10, 2026-11-1
 
 Host tests, no hardware: `cargo test --locked`.
 
-The on-board programs run through a debug probe: `tools/run.sh <name>` builds `hil/`, flashes and runs one (a lock serialises probe use). Exit status 0 means every check passed; logs go to `hil/logs/`. All of them except the `spi_cancel` experiment run SPI0 at 8 MHz; pins are in `docs/device.md`.
+The on-board programs run through a debug probe: `tools/run.sh <name>` builds `hil/`, flashes and runs one (a lock serialises probe use). Exit status 0 means every check passed; logs go to `hil/logs/`. All of them except the `spi_cancel` experiment and `icm45686_soak` (SPI mode 3, 18.75 MHz) run SPI0 at 8 MHz; pins are in `docs/device.md`.
 
 | Program | What it checks |
 |---|---|
@@ -135,6 +134,7 @@ The on-board programs run through a debug probe: `tools/run.sh <name>` builds `h
 | `icm45686_cal` | user offsets, `set_power`, `soft_reset`, `recover` |
 | `icm45686_cancel` | cancelling `read()` part-way, `recover()` after each cancel |
 | `icm45686_selftest` | `self_test`, each run followed by a health check |
+| `icm45686_int1` | the INT1 pin options seen on the pin: polarity, 8 us and 100 us pulse width, pulse and latched mode, push-pull and open-drain, AGC-ready source |
 
 `spi_cancel` is an experiment and must NOT be run: its shared-bus sweep wrote stray registers into the sensor, which then needed a power cycle. It is kept as the record behind the cancel rule above.
 

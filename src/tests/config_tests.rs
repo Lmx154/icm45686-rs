@@ -224,7 +224,7 @@ fn every_config_error_is_produced() {
 
 #[test]
 fn valid_edges_are_accepted() {
-    // The longest pulse is fine below 4 kHz and in latched mode (19.53, p181).
+    // The longest pulse is fine below 4 kHz and in latched mode (19.52, p181).
     let long = Int1Config::new().with_pulse_width(PulseWidth::Us100);
     assert_eq!(Config::new().with_int1(long).validate(), Ok(()));
     let at_6400 = Config::new()

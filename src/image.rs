@@ -60,7 +60,7 @@ pub const fn int1_config2(c: &Config) -> u8 {
     v
 }
 
-/// INT1_TPULSE_DURATION field of INT_PULSE_MIN_ON_INTF1 (19.53, p181).
+/// INT0_TPULSE_DURATION field of INT_PULSE_MIN_ON_INTF0 (19.52, p181).
 pub const fn int1_pulse_width(c: &Config) -> u8 {
     c.int1.pulse_width.code()
 }

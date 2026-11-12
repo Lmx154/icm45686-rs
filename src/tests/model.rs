@@ -94,9 +94,9 @@ pub const IREG: [(u16, u8, u8); 7] = [
         reg::SIFS_I3C_STC_CFG_RESET,
     ),
     (
-        reg::INT_PULSE_MIN_ON_INTF1,
-        reg::INT_PULSE_MIN_ON_INTF1_FIELDS,
-        reg::INT_PULSE_MIN_ON_INTF1_RESET,
+        reg::INT_PULSE_MIN_ON_INTF0,
+        reg::INT_PULSE_MIN_ON_INTF0_FIELDS,
+        reg::INT_PULSE_MIN_ON_INTF0_RESET,
     ),
     (
         reg::IPREG_SYS1_REG_166,

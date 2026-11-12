@@ -84,7 +84,7 @@ pub const FIFO_FULL: u8 = 0x01;
 
 /// INT1 second enable register (16.22, p74-p75): APEX, I2C master, I3C error, wake-on-motion X/Y/Z
 /// and PLL ready; bit 7 is reserved. Reset 0x00. Out of scope; this is not where the pulse width
-/// is, see [`INT_PULSE_MIN_ON_INTF1`].
+/// is, see [`INT_PULSE_MIN_ON_INTF0`].
 pub const INT1_CONFIG1: u8 = 0x17;
 /// INT1_CONFIG1 reset value.
 pub const INT1_CONFIG1_RESET: u8 = 0x00;
@@ -299,14 +299,17 @@ pub const SIFS_I3C_STC_CFG: u16 = IPREG_TOP1 + 0x68;
 pub const SIFS_I3C_STC_CFG_RESET: u8 = 0x23;
 /// SIFS_I3C_STC_CFG bit 2, I3C_STC_MODE.
 pub const I3C_STC_MODE: u8 = 0x04;
-/// IPREG_TOP1 0x6A INT_PULSE_MIN_ON_INTF1 (19.53, p181). Reset 0x01. Bits 2:0 INT1_TPULSE_DURATION:
+/// IPREG_TOP1 0x69 INT_PULSE_MIN_ON_INTF0 (19.52, p181). Reset 0x01. Bits 2:0 INT0_TPULSE_DURATION:
 /// 0 is 100 us (use only if ODR < 4 kHz), 1 is 8 us (required if ODR >= 4 kHz). Applies in pulse
-/// mode. This, not INT1_CONFIG1, holds the INT1 pulse width.
-pub const INT_PULSE_MIN_ON_INTF1: u16 = IPREG_TOP1 + 0x6A;
-/// INT_PULSE_MIN_ON_INTF1 reset value: 8 us.
-pub const INT_PULSE_MIN_ON_INTF1_RESET: u8 = 0x01;
-/// INT_PULSE_MIN_ON_INTF1 bits this crate may change (INT1_TPULSE_DURATION).
-pub const INT_PULSE_MIN_ON_INTF1_FIELDS: u8 = 0x07;
+/// mode. This register sets the width of the pulse on the INT1 pin, measured on the MARV V2 board
+/// (2026-11-11): 0x69 = 0 gave 103.9 us and 1 gave 8.4 us on INT1, and the datasheet's INT0 / INT1 of
+/// 19.52 / 19.53 are numbered from zero, so they are the INT1 / INT2 pins. 0x6A (19.53,
+/// INT1_TPULSE_DURATION) is the INT2 pin's and has no effect on INT1; this crate does not touch it.
+pub const INT_PULSE_MIN_ON_INTF0: u16 = IPREG_TOP1 + 0x69;
+/// INT_PULSE_MIN_ON_INTF0 reset value: 8 us.
+pub const INT_PULSE_MIN_ON_INTF0_RESET: u8 = 0x01;
+/// INT_PULSE_MIN_ON_INTF0 bits this crate may change (INT0_TPULSE_DURATION).
+pub const INT_PULSE_MIN_ON_INTF0_FIELDS: u8 = 0x07;
 /// IPREG_TOP1 0x6C INT_PULSE_MIN_OFF_INTF1 (19.55, p181). Reset 0x01. Bits 2:0
 /// INT1_TDEASSERT_DISABLE: 0 is 100 us, 1 is 8 us minimum de-assertion time.
 pub const INT_PULSE_MIN_OFF_INTF1: u16 = IPREG_TOP1 + 0x6C;

@@ -282,7 +282,9 @@ pub enum Int1Drive {
     OpenDrain = 1,
 }
 
-/// Minimum INT1 pulse width in pulse mode, INT1_TPULSE_DURATION (19.53, p181).
+/// Minimum INT1 pulse width in pulse mode, INT0_TPULSE_DURATION (19.52, p181). The datasheet numbers
+/// the interrupts of 19.52 / 19.53 from zero: its INT0 is the INT1 pin (register 0x69, measured on
+/// the MARV V2 board, 2026-11-11) and its INT1 is the INT2 pin (0x6A, not used by this crate).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PulseWidth {
@@ -293,13 +295,13 @@ pub enum PulseWidth {
 }
 
 impl PulseWidth {
-    /// INT1_TPULSE_DURATION code.
+    /// INT0_TPULSE_DURATION code.
     pub const fn code(self) -> u8 {
         self as u8
     }
 }
 
-/// INT1 pin: which events drive it and how (16.21 to 16.23, p72-p75; 19.53, p181).
+/// INT1 pin: which events drive it and how (16.21 to 16.23, p72-p75; 19.52, p181).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]

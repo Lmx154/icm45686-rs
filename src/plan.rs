@@ -245,10 +245,10 @@ impl Plan {
         }
         p.write(reg::INT1_CONFIG2, image::int1_config2(c));
         p.iregs_unless_reset(
-            reg::INT_PULSE_MIN_ON_INTF1,
-            reg::INT_PULSE_MIN_ON_INTF1_FIELDS,
+            reg::INT_PULSE_MIN_ON_INTF0,
+            reg::INT_PULSE_MIN_ON_INTF0_FIELDS,
             image::int1_pulse_width(c),
-            reg::INT_PULSE_MIN_ON_INTF1_RESET,
+            reg::INT_PULSE_MIN_ON_INTF0_RESET,
         );
 
         if !p.full {

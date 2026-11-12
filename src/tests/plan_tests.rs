@@ -249,7 +249,7 @@ fn skipped_writes_are_those_already_at_reset() {
     let long =
         steps(&Config::new().with_int1(Int1Config::new().with_pulse_width(PulseWidth::Us100)));
     assert!(long.contains(&Step::IregModify {
-        addr: reg::INT_PULSE_MIN_ON_INTF1,
+        addr: reg::INT_PULSE_MIN_ON_INTF0,
         mask: 0x07,
         value: 0x00,
     }));

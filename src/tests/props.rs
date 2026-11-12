@@ -256,7 +256,7 @@ fn check_fields(c: &Config, d: &Device) {
         bit(int2, reg::INT1_POLARITY_HIGH),
         c.int1.polarity == Int1Polarity::ActiveHigh
     );
-    assert_eq!(i(reg::INT_PULSE_MIN_ON_INTF1), c.int1.pulse_width.code());
+    assert_eq!(i(reg::INT_PULSE_MIN_ON_INTF0), c.int1.pulse_width.code());
     let f = &c.fifo;
     let cfg0 = r(reg::FIFO_CONFIG0);
     let cfg3 = r(reg::FIFO_CONFIG3);

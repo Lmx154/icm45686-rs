@@ -144,7 +144,7 @@ fn owned_registers_default_config_exact_list() {
         (Direct, 0x28, 0xFF, 0x00),
         (Direct, 0x32, 0x0E, 0x0C),
         (Indirect, 0xA258, 0x11, 0x00),
-        (Indirect, 0xA26A, 0x07, 0x01),
+        (Indirect, 0xA269, 0x07, 0x01),
         (Indirect, 0xA42A, 0xFF, 0x00),
         (Indirect, 0xA42B, 0x3F, 0x00),
         (Indirect, 0xA438, 0xFF, 0x00),
@@ -186,7 +186,7 @@ fn owned_registers_external_clock_adds_the_i3c_field_and_fills_the_capacity() {
         (Direct, 0x32, 0x0E, 0x0C),
         (Indirect, 0xA258, 0x11, 0x10),
         (Indirect, 0xA268, 0x04, 0x00),
-        (Indirect, 0xA26A, 0x07, 0x01),
+        (Indirect, 0xA269, 0x07, 0x01),
         (Indirect, 0xA42A, 0xFF, 0x00),
         (Indirect, 0xA42B, 0x3F, 0x00),
         (Indirect, 0xA438, 0xFF, 0x00),
@@ -247,7 +247,7 @@ fn default_verify_trace() -> Vec<Event> {
     ];
     for (addr, got) in [
         (0xA258, 0x60), // SMC_CONTROL_0 (19.47, p178)
-        (0xA26A, 0x01), // INT_PULSE_MIN_ON_INTF1 (19.53, p181)
+        (0xA269, 0x01), // INT_PULSE_MIN_ON_INTF0 (19.52, p181)
         (0xa42a, 0x00), // GYRO_X_OFFUSER low (20.1, p189-p190)
         (0xa42b, 0x00), // GYRO_X_OFFUSER high (20.2, p189-p190)
         (0xa438, 0x00), // GYRO_Y_OFFUSER low (20.3, p189-p190)
@@ -291,7 +291,7 @@ fn clkin_verify_trace() -> Vec<Event> {
     for (addr, got) in [
         (0xA258, 0x70),
         (0xA268, 0x23),
-        (0xA26A, 0x01),
+        (0xA269, 0x01),
         (0xa42a, 0x00),
         (0xa42b, 0x00),
         (0xa438, 0x00),

@@ -59,7 +59,7 @@ fn register_addresses_match_the_register_maps() {
         (reg::SMC_CONTROL_0, 0xA258),
         (reg::SREG_CTRL, 0xA267),
         (reg::SIFS_I3C_STC_CFG, 0xA268),
-        (reg::INT_PULSE_MIN_ON_INTF1, 0xA26A),
+        (reg::INT_PULSE_MIN_ON_INTF0, 0xA269),
         (reg::INT_PULSE_MIN_OFF_INTF1, 0xA26C),
         (reg::SELFTEST, 0xA290),
         (reg::GYRO_X_OFFUSER, 0xA42A),
@@ -106,7 +106,7 @@ fn reset_values_match_the_register_descriptions() {
     assert_eq!(reg::DRIVE_CONFIG0_RESET, 0x6C);
     assert_eq!(reg::SMC_CONTROL_0_RESET, 0x60);
     assert_eq!(reg::SIFS_I3C_STC_CFG_RESET, 0x23);
-    assert_eq!(reg::INT_PULSE_MIN_ON_INTF1_RESET, 0x01);
+    assert_eq!(reg::INT_PULSE_MIN_ON_INTF0_RESET, 0x01);
     assert_eq!(reg::INT_PULSE_MIN_OFF_INTF1_RESET, 0x01);
     assert_eq!(reg::IPREG_SYS1_REG_166_RESET, 0x1B);
     assert_eq!(reg::IPREG_SYS1_REG_172_RESET, 0x80);
@@ -216,7 +216,7 @@ fn field_codes_match_the_tables() {
     assert_eq!(AntiAlias::Off.code(), 0);
     assert_eq!(AntiAlias::Fir.code(), 1);
     assert_eq!(AntiAlias::InterpolatorFir.code(), 2);
-    // 19.53, p181.
+    // 19.52, p181.
     assert_eq!(PulseWidth::Us100.code(), 0);
     assert_eq!(PulseWidth::Us8.code(), 1);
     // 16.28, p80.
@@ -340,7 +340,7 @@ fn int1_images() {
         .with_drive(Int1Drive::OpenDrain)
         .with_mode(Int1Mode::Latched);
     assert_eq!(two(all), 0x07);
-    // 19.53, p181.
+    // 19.52, p181.
     let pw = |w| {
         image::int1_pulse_width(&with(|c| {
             c.with_int1(Int1Config::new().with_pulse_width(w))
