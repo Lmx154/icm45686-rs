@@ -2,7 +2,7 @@
 
 Driver for the TDK InvenSense ICM-45686 six-axis IMU over SPI. It is `no_std` and written against the `embedded-hal` 1.0 and `embedded-hal-async` 1.0 traits only (plus optional `defmt`); it owns no pin, timer, executor or HAL. The crate root is the async driver; the `blocking` module runs the same code on the blocking `embedded-hal` traits. It was written for the MARV V2 Rev 1 flight controller and has been run on that one board only.
 
-Status: version 0.1.0. The API may still change. Nothing here is a stability or production-readiness claim.
+Status: version 0.1.0, prepared for crates.io. The API may still change. Nothing here is a stability or production-readiness claim.
 
 ## Works with
 

@@ -2,7 +2,6 @@
 name = "icm45686"
 version = "0.1.0"
 edition = "2024"
-publish = false
 license = "MIT"
 description = "Driver for the TDK InvenSense ICM-45686 six-axis IMU over SPI. Async and blocking, on embedded-hal traits only."
 repository = "https://github.com/Lmx154/icm45686-rs"
@@ -10,6 +9,7 @@ readme = "README.md"
 keywords = ["embedded", "no-std", "driver", "imu", "icm45686"]
 categories = ["embedded", "no-std", "hardware-support"]
 rust-version = "1.99"
+exclude = ["hil/", "tools/", "docs/", "proptest-regressions/", ".gitignore"]
 
 [features]
 defmt = ["dep:defmt"]
