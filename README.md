@@ -4,6 +4,10 @@ Driver for the TDK InvenSense ICM-45686 six-axis IMU over SPI. It is `no_std` an
 
 Status: version 0.1.0. The API may still change. Nothing here is a stability or production-readiness claim.
 
+## Works with
+
+The driver works with any HAL and any MCU whose SPI device and delay implement `embedded-hal-async` 1.0 (async driver) or `embedded-hal` 1.0 (`blocking` module). No embassy crate is needed.
+
 ## Quick start
 
 The configuration structs are `#[non_exhaustive]`: build them with `Config::new()` and the `with_*` setters, not with a struct literal.
