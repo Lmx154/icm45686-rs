@@ -90,7 +90,7 @@ for frame in fifo_frames(&buf[..read.bytes], &config.fifo) {
 - `interrupt_status()` (INT1_STATUS0/1, both clear on read) and `stats()` (overflow, frames-read and bus-error counters).
 - User offsets: `set_offsets`, `offsets`, conversion helpers in `offsets`. `init` zeroes them; `configure` writes the stored value back.
 - `set_power`, `soft_reset`, and `self_test` (runs on the chip's processor; sequence from TDK's public driver; `SelfTestConfig`, `SelfTestReport`).
-- `verify`, `recover`, `info`, `config`, `release`.
+- `verify`, `recover`, `info`, `config`, `release`. `verify_steps` and `verify_step(delay, index)` split a `verify` into one step per owned register (one direct read, or one indirect read with its two 10 us waits; a register that differs is read once more), with the same comparison: all steps in order send what `verify` sends and end the same way, so an application can spread the check over time.
 - Raw access: `read_register`, `read_registers`, `write_register`, `write_registers`, `ireg_read`, `ireg_write`, and the register map in `reg`.
 - The blocking front-end `blocking::Icm45686`, one method per async method.
 

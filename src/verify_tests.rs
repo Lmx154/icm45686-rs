@@ -818,3 +818,70 @@ fn verify_and_recover_through_blocking_match_the_async_driver() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// verify_step
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn verify_steps_in_order_send_what_verify_sends_and_each_finds_its_own_mismatch() {
+    let (shared, mut imu, mut delay) = rig();
+    assert_eq!(imu.verify_steps(), 0);
+    shared.arm(None, None);
+    assert_eq!(
+        run(imu.verify_step(&mut delay, 0)),
+        Err(Error::NotConfigured)
+    );
+    assert_eq!(shared.transactions(), 0);
+    for (config, steps) in [
+        (Config::new(), 33),
+        (clkin(), 34),
+        (rich(), owned(&rich()).len()),
+    ] {
+        let (shared, mut imu, mut delay) = applied(&config, false);
+        let list = owned(&config);
+        assert_eq!(imu.verify_steps(), steps);
+        assert_eq!(imu.verify_steps(), list.registers().len());
+        shared.arm(None, None);
+        assert_eq!(run(imu.verify(&mut delay)), Ok(()));
+        let whole = shared.log();
+        shared.arm(None, None);
+        for index in 0..imu.verify_steps() {
+            assert_eq!(run(imu.verify_step(&mut delay, index)), Ok(()));
+        }
+        assert_eq!(shared.log(), whole);
+        assert_eq!(shared.violations(), 0);
+        shared.arm(None, None);
+        assert_eq!(run(imu.verify_step(&mut delay, steps)), Ok(()));
+        assert_eq!(shared.transactions(), 0);
+        let saved = snapshot(&shared);
+        for item in list.registers() {
+            let bit = item.mask.trailing_zeros();
+            restore(&shared, &saved);
+            flip(&shared, item.space, item.register, bit);
+            let raw = match item.space {
+                Space::Direct => saved.0[usize::from(item.register & 0xFF)],
+                Space::Indirect => saved.1.get(&item.register).copied().unwrap_or(0),
+            };
+            let hit = |o: &OwnedRegister| {
+                o.space == item.space && o.register == item.register && o.mask >> bit & 1 == 1
+            };
+            let whole = run(imu.verify(&mut delay));
+            let first = list.registers().iter().position(hit).unwrap();
+            assert_eq!(
+                whole,
+                Err(mismatch(&list.registers()[first], raw ^ (1 << bit)))
+            );
+            for (j, other) in list.registers().iter().enumerate() {
+                let got = run(imu.verify_step(&mut delay, j));
+                if hit(other) {
+                    assert_eq!(got, Err(mismatch(other, raw ^ (1 << bit))), "{other:?}");
+                } else {
+                    assert_eq!(got, Ok(()), "{item:?} at step {j}");
+                }
+            }
+            assert_eq!(imu.config(), Some(&config));
+        }
+        restore(&shared, &saved);
+    }
+}

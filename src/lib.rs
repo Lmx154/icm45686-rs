@@ -349,6 +349,50 @@ impl<SPI: SpiDevice> Icm45686<SPI> {
         Ok(())
     }
 
+    /// The number of [`verify_step`](Self::verify_step) indices: one per register
+    /// [`verify`](Self::verify) reads (33 for the default [`Config`], 34 with the external clock);
+    /// 0 when not configured.
+    pub fn verify_steps(&self) -> usize {
+        self.applied.map_or(0, |config| {
+            owned_registers(&config, &self.offsets).registers().len()
+        })
+    }
+
+    /// Checks the `index`-th register that [`verify`](Self::verify) reads, with the same comparison:
+    /// a register that differs is read once more, and only if it differs again the method returns
+    /// [`Error::ConfigMismatch`]. Every index from 0 to [`verify_steps`](Self::verify_steps) - 1, in
+    /// order, sends what one `verify` sends and ends the same way, so an application can spread a
+    /// `verify` over time. A direct register costs one transaction; an indirect one two transactions
+    /// and two 10 us waits; a register that differs is read once more. An index at or past
+    /// `verify_steps()` sends nothing and returns `Ok`. [`Error::NotConfigured`] when not configured.
+    pub async fn verify_step(
+        &mut self,
+        delay: &mut impl DelayNs,
+        index: usize,
+    ) -> Result<(), Error<SPI::Error>> {
+        let Some(config) = self.applied else {
+            return Err(Error::NotConfigured);
+        };
+        let owned = owned_registers(&config, &self.offsets);
+        let Some(item) = owned.registers().get(index) else {
+            return Ok(());
+        };
+        if self.read_owned(delay, item).await? & item.mask == item.expected {
+            return Ok(());
+        }
+        let found = self.read_owned(delay, item).await?;
+        if found & item.mask != item.expected {
+            return Err(Error::ConfigMismatch(Mismatch {
+                space: item.space,
+                register: item.register,
+                mask: item.mask,
+                expected: item.expected,
+                found,
+            }));
+        }
+        Ok(())
+    }
+
     /// Re-frames the bus, checks the identity and, when configured, runs [`verify`](Self::verify).
     ///
     /// 1. One transaction holding a single `Operation::Write` of one byte, the read address of

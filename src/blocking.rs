@@ -139,6 +139,20 @@ impl<SPI: SpiDevice> Icm45686<SPI> {
         block_on(self.inner.verify(&mut Wait(delay)))
     }
 
+    /// See [`crate::Icm45686::verify_steps`].
+    pub fn verify_steps(&self) -> usize {
+        self.inner.verify_steps()
+    }
+
+    /// See [`crate::Icm45686::verify_step`].
+    pub fn verify_step(
+        &mut self,
+        delay: &mut impl DelayNs,
+        index: usize,
+    ) -> Result<(), Error<SPI::Error>> {
+        block_on(self.inner.verify_step(&mut Wait(delay), index))
+    }
+
     /// See [`crate::Icm45686::recover`].
     pub fn recover(&mut self, delay: &mut impl DelayNs) -> Result<(), Error<SPI::Error>> {
         block_on(self.inner.recover(&mut Wait(delay)))
